@@ -192,7 +192,7 @@ class ModelTrainerV2:
         summaries = []
         for result, metric in zip(run_results, metrics):
             metric.update(result, epoch, step)
-            summaries.append(tf.Summary.Value(tag=f"{key.name}/{metric.name}_0", simple_value=result))
+            summaries.append(tf.Summary.Value(tag="{}/{}_0".format(key.name, metric.name), simple_value=result))
         return summaries
 
     def end_epoch(self):
@@ -360,8 +360,8 @@ class ModelTrainer:
         mae, smape = results
         if self.summary_writer and global_step > 200:
             summary = tf.Summary(value=[
-                tf.Summary.Value(tag=f"test/MAE_{self.model_no}", simple_value=mae),
-                tf.Summary.Value(tag=f"test/SMAPE_{self.model_no}", simple_value=smape),
+                tf.Summary.Value(tag="test/MAE_{}".format(self.model_no), simple_value=mae),
+                tf.Summary.Value(tag="test/SMAPE_{}".format(self.model_no), simple_value=smape),
             ])
             self.summary_writer.add_summary(summary, global_step=global_step)
         smooth_mae = self.smooth_eval_mae(mae)
@@ -433,7 +433,7 @@ def train(name, hparams, multi_gpu=False, n_models=1, train_completeness_thresho
     inc_step = tf.assign_add(global_step, 1)
 
 
-    all_models: List[ModelTrainerV2] = []
+    all_models = []
 
     def create_model(scope, index, prefix, seed):
 
@@ -486,7 +486,7 @@ def train(name, hparams, multi_gpu=False, n_models=1, train_completeness_thresho
                 eval_stages.append((Stage.EVAL_FRWD_EMA, forward_eval_model))
 
         if write_summaries:
-            summ_path = f"{logdir}/{name}_{index}"
+            summ_path = "{}/{}_{}".format(logdir, name, index)
             if os.path.exists(summ_path):
                 shutil.rmtree(summ_path)
             summ_writer = tf.summary.FileWriter(summ_path)  # , graph=tf.get_default_graph()
@@ -502,19 +502,19 @@ def train(name, hparams, multi_gpu=False, n_models=1, train_completeness_thresho
 
 
     if n_models == 1:
-        with tf.device(f"/gpu:{gpu}"):
+        with tf.device("/gpu:{}".format(gpu)):
             scope = tf.get_variable_scope()
             all_models = [create_model(scope, 0, None, seed=seed)]
     else:
         for i in range(n_models):
-            device = f"/gpu:{i}" if multi_gpu else f"/gpu:{gpu}"
+            device = "/gpu:{}".format(i) if multi_gpu else "/gpu:{}".format(gpu)
             with tf.device(device):
-                prefix = f"m_{i}"
+                prefix = "m_{}".format(i)
                 with tf.variable_scope(prefix) as scope:
                     all_models.append(create_model(scope, i, prefix=prefix, seed=seed + i))
     trainer = MultiModelTrainer(all_models, inc_step)
     if save_best_model or save_from_step:
-        saver_path = f'data/cpt/{name}'
+        saver_path = 'data/cpt/{}'.format(name)
         if os.path.exists(saver_path):
             shutil.rmtree(saver_path)
         os.makedirs(saver_path)
@@ -602,9 +602,9 @@ def train(name, hparams, multi_gpu=False, n_models=1, train_completeness_thresho
 
                     if save_best_model and epoch > 0 and eval_smape.last < best_smape:
                         best_smape = eval_smape.last
-                        saver.save(sess, f'data/cpt/{name}/cpt', global_step=step)
+                        saver.save(sess, 'data/cpt/{}/cpt'.format(name), global_step=step)
                     if save_from_step and step >= save_from_step:
-                        saver.save(sess, f'data/cpt/{name}/cpt', global_step=step)
+                        saver.save(sess, 'data/cpt/{}/cpt'.format(name), global_step=step)
 
                     if avg_sgd and ema_eval_stages:
                         ema_saver.save(sess, 'data/cpt_tmp/ema',  write_meta_graph=False)
@@ -677,14 +677,14 @@ def predict(checkpoints, hparams, return_x=False, verbose=False, predict_window=
     else:
         models = []
         for i in range(n_models):
-            prefix = f"m_{i}"
+            prefix = "m_{}".format(i)
             with tf.variable_scope(prefix) as scope:
                 models.append(Model(pipe, hparams, is_train=False, seed=seed, asgd_decay=asgd_decay, graph_prefix=prefix))
         model = models[target_model]
 
     if asgd:
         var_list = model.ema.variables_to_restore()
-        prefix = f"m_{target_model}"
+        prefix = "m_{}".format(target_model)
         for var in list(var_list.keys()):
             if var.endswith('ExponentialMovingAverage') and not var.startswith(prefix):
                 del var_list[var]

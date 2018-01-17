@@ -7,7 +7,7 @@ import argparse
 import extractor
 from feeder import VarFeeder
 import numba
-from typing import Tuple, Dict, Collection, List
+from typing import Tuple, Dict, List
 
 
 def read_cached(name) -> pd.DataFrame:
@@ -45,7 +45,8 @@ def read_all() -> pd.DataFrame:
         # Official data
         df = read_file('train_2')
         # Scraped data
-        scraped = read_file('2017-08-15_2017-09-11_new')
+#         scraped = read_file('2017-08-15_2017-09-11_new')
+        scraped = read_file('2017-08-15_2017-09-11')
         # Update last two days by scraped data
         df[pd.Timestamp('2017-09-10')] = scraped['2017-09-10']
         df[pd.Timestamp('2017-09-11')] = scraped['2017-09-11']
@@ -211,11 +212,11 @@ def make_page_features(pages: np.ndarray) -> pd.DataFrame:
     """
     tagged = extractor.extract(pages).set_index('page')
     # Drop useless features
-    features: pd.DataFrame = tagged.drop(['term', 'marker'], axis=1)
+    features = tagged.drop(['term', 'marker'], axis=1)
     return features
 
 
-def uniq_page_map(pages:Collection):
+def uniq_page_map(pages):
     """
     Finds agent types (spider, desktop, mobile, all) for each unique url, i.e. groups pages by agents
     :param pages: all urls (must be presorted)
@@ -277,7 +278,8 @@ def run():
 
     # We have to project some date-dependent features (day of week, etc) to the future dates for prediction
     features_end = data_end + pd.Timedelta(args.add_days, unit='D')
-    print(f"start: {data_start}, end:{data_end}, features_end:{features_end}")
+#     print(f"start: {data_start}, end:{data_end}, features_end:{features_end}")
+    print("start: {data_start}, end:{data_end}, features_end:{features_end}".format(data_start=data_start, data_end=data_end, features_end=features_end))
 
     # Group unique pages by agents
     assert df.index.is_monotonic_increasing

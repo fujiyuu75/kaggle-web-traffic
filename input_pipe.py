@@ -143,9 +143,9 @@ class InputPipe:
             upper_train_start = self.inp.data_start + pd.Timedelta(free_space - 1, 'D')
             upper_test_end = upper_train_start + pd.Timedelta(n_days, 'D')
             upper_test_start = upper_test_end - pd.Timedelta(self.predict_window, 'D')
-            print(f"Free space for training: {free_space} days.")
-            print(f" Lower train {lower_train_start}, prediction {lower_test_start}..{lower_test_end}")
-            print(f" Upper train {upper_train_start}, prediction {upper_test_start}..{upper_test_end}")
+            print("Free space for training: {} days.".format(free_space))
+            print(" Lower train {}, prediction {}..{}".format(lower_train_start, lower_test_start, lower_test_end))
+            print(" Upper train {}, prediction {}..{}".format(upper_train_start, upper_test_start, upper_test_end))
         # Random starting point
         offset = tf.random_uniform((), self.start_offset, free_space, dtype=tf.int32, seed=self.rand_seed)
         end = offset + n_days
